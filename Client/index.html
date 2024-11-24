@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+    <script src="https://cdn.socket.io/4.8.0/socket.io.min.js"></script>
+</head>
+
+<body>
+    <h1>Chat Room (Non Fonctionnel)</h1>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="Type your message...">
+    <button id="sendButton">Send</button>
+
+    <script>
+        const socket = io("http://localhost:3000");
+        // Rejoindre une room spécifique
+        socket.emit('joinRoom', { roomId: '2' });
+
+        // Envoie du message
+        document.getElementById('sendButton').addEventListener('click', () => {
+            const message = document.getElementById('messageInput').value;
+            socket.emit('chatMessage', { roomId: '2', userId: '1', message });
+        });
+
+        // Affiche les messages reçus
+        socket.on('message', (data) => {
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = `User ${data.senderId}: ${data.content}`;
+            document.getElementById('messages').appendChild(messageDiv);
+        });
+    </script>
+</body>
+
+</html>

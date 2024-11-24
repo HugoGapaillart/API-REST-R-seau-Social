@@ -1,0 +1,498 @@
+openapi: 3.0.3
+info:
+  title: API REST Réseau social
+  description: API REST d'un réseau social où l'on peut créer un compte et publier des articles ainsi que commenter les articles des autres utilisateur.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api
+    description: Serveur local
+tags:
+  - name: Authentification
+    description: Gestion des connexions et inscriptions.
+  - name: User
+    description: Gestion des utilisateurs et des relations.
+  - name: Post
+    description: Gestion des publications.
+  - name: Comment
+    description: Gestion des commentaires.
+  - name: Room
+    description: Gestion des rooms de chat.
+paths:
+  /auth/login:
+    post:
+      summary: Connexion d'un utilisateur
+      tags:
+        - Authentification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLogin"
+      responses:
+        "200":
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        "400":
+          description: Paramètres manquants
+        "403":
+          description: Échec de l'authentification
+
+  /auth/register:
+    post:
+      summary: Inscription d'un utilisateur
+      tags:
+        - Authentification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLogin"
+      responses:
+        "201":
+          description: Utilisateur créé avec succès
+        "400":
+          description: Paramètres manquants ou adresse mail déjà utilisée
+
+  /user/edit:
+    put:
+      summary: Modifier les informations d'un utilisateur
+      tags:
+        - User
+      security:
+        - jwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+      responses:
+        "201":
+          description: Utilisateur modifié avec succès
+        "400":
+          description: Échec de la modification
+
+  /user/follow/{id}:
+    post:
+      summary: Suivre un utilisateur
+      tags:
+        - User
+      security:
+        - jwt: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID de l'utilisateur à suivre
+      responses:
+        "201":
+          description: Utilisateur suivi avec succès
+        "400":
+          description: Échec de l'opération
+
+  /user/show:
+    get:
+      summary: Afficher les publications des amis
+      tags:
+        - User
+      security:
+        - jwt: []
+      responses:
+        "200":
+          description: Liste des publications des amis
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    titre:
+                      type: string
+                      example: Mon premier post
+                    contenu:
+                      type: string
+                      example: Ceci est un contenu de publication
+                    comments:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          contenu:
+                            type: string
+                            example: Super post !
+        "500":
+          description: Erreur interne
+
+  /user/delete:
+    delete:
+      summary: Supprimer un utilisateur
+      tags:
+        - User
+      security:
+        - jwt: []
+      responses:
+        "200":
+          description: Utilisateur supprimé avec succès
+        "400":
+          description: Échec de la suppression
+
+  /post/create:
+    post:
+      tags:
+        - Post
+      summary: Créer une publication
+      description: Permet à un utilisateur de créer une nouvelle publication.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostCreate"
+      responses:
+        "201":
+          description: Publication créée avec succès
+        "400":
+          description: Erreur - Données manquantes ou invalides
+        "500":
+          description: Erreur serveur interne
+
+  /post/edit/{id}:
+    put:
+      tags:
+        - Post
+      summary: Modifier une publication
+      description: Permet de modifier le titre et le contenu d'une publication existante.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: ID de la publication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostUpdate"
+      responses:
+        "200":
+          description: Publication modifiée avec succès
+        "400":
+          description: Erreur - Données invalides ou publication non trouvée
+        "500":
+          description: Erreur serveur interne
+
+  /post/{id}/comment:
+    post:
+      tags:
+        - Comment
+      summary: Ajouter un commentaire
+      description: Permet d'ajouter un commentaire à une publication.
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: ID de la publication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentCreate"
+      responses:
+        "201":
+          description: Commentaire ajouté avec succès
+        "400":
+          description: Erreur - Données manquantes ou invalides
+        "500":
+          description: Erreur serveur interne
+
+  /post/show:
+    get:
+      tags:
+        - Post
+      summary: Afficher les publications
+      description: Retourne toutes les publications de l'utilisateur connecté, avec leurs commentaires.
+      responses:
+        "200":
+          description: Liste des publications récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    titre:
+                      type: string
+                    contenu:
+                      type: string
+                    commentaires:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          contenu:
+                            type: string
+        "500":
+          description: Erreur serveur interne
+
+  /post/{postId}:
+    delete:
+      tags:
+        - Post
+      summary: Supprimer une publication
+      description: Supprime une publication ainsi que tous ses commentaires.
+      parameters:
+        - in: path
+          name: postId
+          schema:
+            type: integer
+          required: true
+          description: ID de la publication
+      responses:
+        "200":
+          description: Publication supprimée avec succès
+        "500":
+          description: Erreur serveur interne
+
+  /comment/{commentId}:
+    delete:
+      tags:
+        - Comment
+      summary: Supprimer un commentaire
+      description: Supprime un commentaire spécifique.
+      parameters:
+        - in: path
+          name: commentId
+          schema:
+            type: integer
+          required: true
+          description: ID du commentaire
+      responses:
+        "200":
+          description: Commentaire supprimé avec succès
+        "500":
+          description: Erreur serveur interne
+
+  /room/{id}:
+    post:
+      summary: Créer une room entre deux utilisateurs
+      tags:
+        - Room
+      security:
+        - jwt: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID de l'utilisateur invité
+      responses:
+        "201":
+          description: Room créée avec succès
+        "400":
+          description: Échec de la création de la room
+        "500":
+          description: Erreur interne du serveur
+components:
+  schemas:
+    UserLogin:
+      type: object
+      properties:
+        mail:
+          type: string
+          format: email
+          example: user@example.com
+          description: Adresse email de l'utilisateur
+        psw:
+          type: string
+          format: password
+          description: Mot de passe hashé de l'utilisateur
+      required:
+        - mail
+        - psw
+      description: Schéma du modèle User
+
+    UserCreate:
+      type: object
+      properties:
+        nom:
+          type: string
+          example: Dupont
+        prenom:
+          type: string
+          example: Jean
+        photo:
+          type: string
+          format: url
+          example: https://example.com/photo.jpg
+        mail:
+          type: string
+          format: email
+          example: user@example.com
+          description: Adresse email unique
+        psw:
+          type: string
+          format: password
+          description: Mot de passe à crypter
+      required:
+        - mail
+        - psw
+      description: Schéma pour la création d'un utilisateur
+
+    UserUpdate:
+      type: object
+      properties:
+        nom:
+          type: string
+          example: Dupont
+        prenom:
+          type: string
+          example: Jean
+        photo:
+          type: string
+          format: url
+          example: https://example.com/photo.jpg
+        mail:
+          type: string
+          format: email
+          example: user@example.com
+        psw:
+          type: string
+          format: password
+          description: Nouveau mot de passe à crypter
+      description: Schéma pour la mise à jour d'un utilisateur
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+          description: Identifiant unique du post
+        titre:
+          type: string
+          example: "Mon premier post"
+          description: Titre de la publication
+        contenu:
+          type: string
+          example: "Ceci est le contenu de mon premier post. Bienvenue !"
+          description: Contenu de la publication
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-11-24T10:00:00Z"
+          description: Date de création de la publication
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-11-24T12:00:00Z"
+          description: Date de dernière mise à jour de la publication
+      required:
+        - titre
+        - contenu
+      description: Schéma du modèle Post
+
+    PostCreate:
+      type: object
+      properties:
+        titre:
+          type: string
+          example: "Nouvelle recette"
+          description: Titre de la nouvelle publication
+        contenu:
+          type: string
+          example: "Voici ma recette préférée de smoothie aux fruits."
+          description: Contenu de la nouvelle publication
+      required:
+        - titre
+        - contenu
+      description: Schéma pour la création d'un post
+
+    PostUpdate:
+      type: object
+      properties:
+        titre:
+          type: string
+          example: "Titre mis à jour"
+          description: Nouveau titre de la publication
+        contenu:
+          type: string
+          example: "Contenu mis à jour de ma recette."
+          description: Nouveau contenu de la publication
+      description: Schéma pour la mise à jour d'un post
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+          description: Identifiant unique du commentaire
+        contenu:
+          type: string
+          example: "Ceci est un commentaire sur votre post."
+          description: Contenu du commentaire
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-11-24T10:00:00Z"
+          description: Date de création du commentaire
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-11-24T12:00:00Z"
+          description: Date de dernière mise à jour du commentaire
+        postId:
+          type: integer
+          example: 10
+          description: Identifiant du post associé au commentaire
+        userId:
+          type: integer
+          example: 5
+          description: Identifiant de l'utilisateur ayant publié le commentaire
+      required:
+        - contenu
+      description: Schéma du modèle Comment
+
+    CommentCreate:
+      type: object
+      properties:
+        contenu:
+          type: string
+          example: "Ceci est un commentaire sur votre post."
+          description: Contenu du commentaire
+      required:
+        - contenu
+      description: Schéma pour la création d'un commentaire
+
+    CommentUpdate:
+      type: object
+      properties:
+        contenu:
+          type: string
+          example: "Ceci est une mise à jour de mon commentaire."
+          description: Nouveau contenu du commentaire
+      description: Schéma pour la mise à jour d'un commentaire
+
+  securitySchemes:
+    jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
